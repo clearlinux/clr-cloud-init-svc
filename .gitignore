@@ -11,6 +11,25 @@ pyvenv.cfg
 .venv
 pip-selfcheck.json
 # Vim
-*.swp
-*.swo
+[._]*.s[a-w][a-z]
+[._]s[a-w][a-z]
+*.un~
+Session.vim
+.netrwhist
 *~
+##flask 
+#
+.DS_Store
+*.pyc
+*.pyo
+env
+env*
+dist
+build
+*.egg
+*.egg-info
+_mailinglist
+.tox
+.cache/
+.idea/
+__pycache*

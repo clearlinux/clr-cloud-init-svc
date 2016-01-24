@@ -15,6 +15,8 @@
 #
 
 from flask import Flask, abort, request
+from settings import APP_STATIC
+import os
 
 app = Flask(__name__)
 
@@ -39,6 +41,11 @@ def get_config(mac_addr=None):
             return reply
     else:
         abort(404)
+
+@app.route('/foo')
+def foo():
+    with open(os.path.join(APP_STATIC, 'foo.txt')) as f:
+        return f.read()
 
 if __name__ == '__main__':
     app.run(debug=True)
