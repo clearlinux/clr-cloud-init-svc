@@ -17,11 +17,18 @@
 from flask import Flask, abort, request
 from settings import APP_STATIC
 import os
+import re
 
 app = Flask(__name__)
 
 def get_config_data(mac_addr):
-    return 'controller1,192.168.6.1,the rest...\n'
+    pattern = '^%s' % mac_addr
+    expr = re.compile(pattern)
+    with open(os.path.join(APP_STATIC, 'config.txt')) as f:
+        for line in f:
+            if expr.match(line):
+                return line
+    return None
 
 @app.route('/')
 def index():
