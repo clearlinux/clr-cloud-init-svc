@@ -1,0 +1,16 @@
+packages:
+  - python-basic
+  - sysadmin-hostmgmt
+
+groups:
+  - cloud-init
+
+users:
+  - name: cloudinit
+    groups: cloud-init, users
+    homedir: /home/cloudinit
+    no-log-init: true
+    sudo:
+    - ALL ALL=(ALL) NOPASSWD:ALL
+    system: true
+

@@ -1,0 +1,15 @@
+#cloud-config
+packages:
+  - python-basic
+
+groups:
+  - cloud-init
+
+users:
+  - name: cloudinit
+    groups: cloud-init
+    homedir: /home/cloudinit
+    no-log-init: true
+    sudo:
+    - ALL ALL=(ALL) NOPASSWD:ALL
+
