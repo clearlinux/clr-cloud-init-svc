@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from flask import Flask, abort, request
+from flask import Flask, abort, request, jsonify
 from settings import APP_STATIC
 import os
 import re
@@ -24,15 +24,22 @@ app = Flask(__name__)
 def get_config_data(mac_addr):
     pattern = '^%s' % mac_addr
     expr = re.compile(pattern)
+    data = dict()
     with open(os.path.join(APP_STATIC, 'config.txt')) as f:
         for line in f:
             if expr.match(line):
-                return line
+                items = line.rstrip().split(',')
+                data['mac_addr'] = items[0]
+                data['role'] = items[1]
+
+                return jsonify(data)
     return None
+
 
 @app.route('/')
 def index():
     return 'Clear Cloud Init Service... is alive\n'
+
 
 @app.route('/get_config/<mac_addr>')
 @app.route('/get_config/')
@@ -48,6 +55,24 @@ def get_config(mac_addr=None):
             return reply
     else:
         abort(404)
+
+
+@app.route('/get_role/<role>')
+@app.route('/get_role/')
+def get_role(role=None):
+    reply = None
+    if role is None:
+        role = request.args.get('role')
+    if role:
+        role_file = os.path.join(APP_STATIC, "roles", role)
+        if os.path.isfile(role_file):
+            with open(role_file) as f:
+                return f.read()
+        else:
+            abort(404)
+    else:
+        abort(404)
+
 
 @app.route('/foo')
 def foo():
