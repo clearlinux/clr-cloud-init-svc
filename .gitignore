@@ -22,8 +22,8 @@ Session.vim
 .DS_Store
 *.pyc
 *.pyo
-env
-env*
+#env
+#env*
 dist
 build
 *.egg
