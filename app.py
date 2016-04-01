@@ -21,18 +21,32 @@ import re
 
 app = Flask(__name__)
 
+
 def get_config_data(mac_addr):
+    data = dict()
+    ddata = dict()
     pattern = '^%s' % mac_addr
     expr = re.compile(pattern)
-    data = dict()
+    dpattern = '^default'
+    dexpr = re.compile(dpattern)
+    found_default = False
+
     with open(os.path.join(APP_STATIC, 'config.txt')) as f:
         for line in f:
             if expr.match(line):
                 items = line.rstrip().split(',')
                 data['mac_addr'] = items[0]
                 data['role'] = items[1]
-
                 return jsonify(data)
+            if dexpr.match(line):
+                items = line.rstrip().split(',')
+                ddata['mac_addr'] = items[0]
+                ddata['role'] = items[1]
+                found_default = True
+
+        if found_default:
+            return jsonify(ddata)
+
     return None
 
 
@@ -73,11 +87,6 @@ def get_role(role=None):
     else:
         abort(404)
 
-
-@app.route('/foo')
-def foo():
-    with open(os.path.join(APP_STATIC, 'foo.txt')) as f:
-        return f.read()
 
 if __name__ == '__main__':
     app.run(debug=True)
