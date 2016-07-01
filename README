@@ -1,0 +1,12 @@
+Ister Cloud Init Service
+=======================
+
+This little web application is intended to be a helper for standing up
+up n-node clusters of Clear Linux. It complements the Clear Linux
+Installer (Ister) and enables landing role-based cloud-init userdata files.
+Our proof-of-concept enabled standing up hosts ready to be managed
+through ansible.
+
+Generally this would run on the iPXE server that hosts are booting from
+to install Clear Linux. See docs on https://clearlinux.org for more details.
+
