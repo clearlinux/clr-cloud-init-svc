@@ -15,7 +15,7 @@
 #
 
 from flask import Flask, abort, request, jsonify
-from settings import APP_STATIC
+from settings import APP_STATIC, SUBDIR
 import os
 import re
 
@@ -50,13 +50,13 @@ def get_config_data(mac_addr):
     return None
 
 
-@app.route('/')
+@app.route(SUBDIR + '/')
 def index():
     return 'Clear Cloud Init Service... is alive\n'
 
 
-@app.route('/get_config/<mac_addr>')
-@app.route('/get_config/')
+@app.route(SUBDIR + '/get_config/<mac_addr>')
+@app.route(SUBDIR + '/get_config/')
 def get_config(mac_addr=None):
     reply = None
     if mac_addr is None:
@@ -71,8 +71,8 @@ def get_config(mac_addr=None):
         abort(404)
 
 
-@app.route('/get_role/<role>')
-@app.route('/get_role/')
+@app.route(SUBDIR + '/get_role/<role>')
+@app.route(SUBDIR + '/get_role/')
 def get_role(role=None):
     reply = None
     if role is None:
@@ -89,5 +89,4 @@ def get_role(role=None):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
-
+    app.run()

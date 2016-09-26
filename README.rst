@@ -1,5 +1,5 @@
 Ister Cloud Init Service
-=======================
+========================
 
 This little web application is intended to be a helper for standing up
 up n-node clusters of Clear Linux. It complements the Clear Linux
@@ -34,3 +34,28 @@ Standing up the web app (high level)
 # Test web-app
     curl localhost/icis/get_role/compute
 
+
+.. code-block:: console
+
+  mkdir -pv /var/www
+  mkdir -pv /var/log/uwsgi
+  chown httpd:httpd /var/log/uwsgi
+  cd /var/www/
+  git clone https://github.com/clearlinux/ister-cloud-init-svc
+  chown -R httpd:httpd /var/www
+  cd ister-cloud-init-svc
+  # Install python if you are on clear and don't have it already this bundle
+  # has it
+  swupd bundle-add os-core-dev
+  virtualenv .venv
+  . .venv/bin/activate
+  pip install -r requirements.txt
+  ln -s /var/www/ister-cloud-init-svc/icis_uwsgi.service \
+    /etc/systemd/system/icis_uwsgi.service
+  # If you are using nginx then obviously don't trash your current config, use
+  # this as a guide instead
+  cp /var/www/ister-cloud-init-svc/nginx.conf /etc/nginx/nginx.conf
+  systemctl daemon-reload
+  systemctl restart nginx icis_uwsgi
+  # Verify it reponds
+  curl http://localhost/icis/get_role/compute
