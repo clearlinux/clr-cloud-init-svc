@@ -9,6 +9,6 @@
     "Version": 6580,
     "Bundles": ["kernel-native", "os-core", "os-core-update", "os-cloudguest", "bootloader"],
     "PostNonChroot": ["./installation-image-post-update-version.py"],
-    "IsterCloudInitSvc": "http://localhost:5000/"
+    "IsterCloudInitSvc": "http://192.168.1.1/icis/"
 }
 
