@@ -38,7 +38,6 @@ sphinx-rtd-theme==0.1.9
 tornado==4.3
 urllib3==1.14
 urwid==1.3.1
-virtualenv==14.0.1
 watchdog==0.8.3
 Werkzeug==0.11.3
 wrapt==1.10.6
