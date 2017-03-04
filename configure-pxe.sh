@@ -9,7 +9,8 @@ tftp_root=/srv/tftp
 main() {
 	if [ -d /sys/class/net/$external_iface ] && [ -d /sys/class/net/$internal_iface ] && [[ $(grep '^up$' /sys/class/net/$external_iface/operstate) ]] && [[ $(grep '^up$' /sys/class/net/$internal_iface/operstate) ]]; then
 		install_dependencies
-		configure_tftp_dns_server
+		configure_tftp_server
+		configure_dns_server
 		configure_network
 		configure_dhcp_server
 		configure_nat
@@ -25,7 +26,7 @@ install_dependencies() {
 	swupd bundle-add pxe-server
 }
 
-configure_tftp_dns_server() {
+configure_tftp_server() {
 	rm -rf $tftp_root
 	mkdir -p $tftp_root
 	ln -sf /usr/share/ipxe/ipxe-x86_64.efi $tftp_root/ipxe-x86_64.efi
@@ -33,11 +34,25 @@ configure_tftp_dns_server() {
 	cat > /etc/dnsmasq.conf << EOF
 enable-tftp
 tftp-root=$tftp_root
-port=0
 EOF
 	
 	systemctl enable dnsmasq
+}
+
+configure_dns_server() {
+	cat > /etc/systemd/resolved.conf << EOF
+[Resolve]
+DNSStubListener=no
+EOF
+	grep '^nameserver' /etc/resolv.conf | cat > /etc/resolv-dnsmasq.conf
+	cat >> /etc/dnsmasq.conf << EOF
+resolv-file=/etc/resolv-dnsmasq.conf
+listen-address=127.0.0.1,192.168.1.1
+EOF
+	
+	systemctl stop systemd-resolved
 	systemctl restart dnsmasq
+	systemctl start systemd-resolved
 }
 
 configure_network() {
@@ -49,6 +64,7 @@ configure_network() {
 Name=$external_iface
 [Network]
 DHCP=yes
+DNS=127.0.0.1
 EOF
 	local pxe_subnet_bitmask
 	convert_ip_address_to_bitmask $pxe_subnet_mask_ip pxe_subnet_bitmask
@@ -57,6 +73,7 @@ EOF
 Name=$internal_iface
 [Network]
 DHCP=no
+DNS=$pxe_internal_ip
 Address=$pxe_internal_ip/$pxe_subnet_bitmask
 EOF
 	
