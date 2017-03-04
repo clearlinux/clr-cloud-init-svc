@@ -6,6 +6,8 @@ pxe_internal_ip=$pxe_subnet.1
 pxe_subnet_mask_ip=255.255.255.0
 tftp_root=/srv/tftp
 
+server_domain=$1
+
 main() {
 	if [ -d /sys/class/net/$external_iface ] && [ -d /sys/class/net/$internal_iface ] && [[ $(grep '^up$' /sys/class/net/$external_iface/operstate) ]] && [[ $(grep '^up$' /sys/class/net/$internal_iface/operstate) ]]; then
 		install_dependencies
@@ -47,7 +49,7 @@ EOF
 	grep '^nameserver' /etc/resolv.conf | cat > /etc/resolv-dnsmasq.conf
 	cat >> /etc/dnsmasq.conf << EOF
 resolv-file=/etc/resolv-dnsmasq.conf
-listen-address=127.0.0.1,192.168.1.1
+listen-address=127.0.0.1,$pxe_internal_ip
 EOF
 	
 	systemctl stop systemd-resolved
@@ -156,6 +158,7 @@ subnet $pxe_subnet.0 netmask $pxe_subnet_mask_ip {
 	option broadcast-address $pxe_subnet.255;
 	option routers $pxe_internal_ip;
 	option domain-name-servers $pxe_internal_ip;
+	option domain-name $server_domain;
 	
 	pool {
 		allow members of "PXE-Chainload";

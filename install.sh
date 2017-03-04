@@ -1,6 +1,6 @@
 #!/bin/bash
 server_hostname=$(hostname)
-server_domain=$(hostname -f | sed -e "s/$server_hostname\.*//")
+server_domain=$(dnsdomainname)
 
 web_root=/var/www
 pxe_root=$web_root/pxe-images
@@ -11,10 +11,10 @@ uwsgi_socket_dir=/run/uwsgi
 icis_app_name=icis
 
 main() {
-	if [ ! -z "$server_hostname" ] && [ ! -z "$server_domain" ]; then
+	if [ ! -z $server_hostname ] && [ ! -z $server_domain ]; then
 		install_dependencies
 		configure_web_server
-		$(dirname $0)/configure-pxe.sh
+		$(dirname $0)/configure-pxe.sh $server_domain
 		return $?
 	else
 		echo 'ERROR: Server hostname or server domain is not defined!!'
