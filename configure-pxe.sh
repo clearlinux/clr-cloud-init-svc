@@ -9,9 +9,10 @@ tftp_root=/srv/tftp
 main() {
 	if [ -d /sys/class/net/$external_iface ] && [ -d /sys/class/net/$internal_iface ] && [[ $(grep '^up$' /sys/class/net/$external_iface/operstate) ]] && [[ $(grep '^up$' /sys/class/net/$internal_iface/operstate) ]]; then
 		install_dependencies
-		configure_network
-		configure_dns_tftp_server
+		configure_tftp_server
+		configure_dns_server
 		configure_dhcp_server
+		configure_network
 		configure_nat
 		return 0
 	else
@@ -25,60 +26,30 @@ install_dependencies() {
 	swupd bundle-add pxe-server
 }
 
-configure_network() {
-	rm -rf /etc/systemd/network
-	mkdir -p /etc/systemd/network
-	
-	ln -sf /dev/null /etc/systemd/network/80-dhcp.network
-	cat > /etc/systemd/network/80-external-dynamic.network << EOF
-[Match]
-Name=$external_iface
-[Network]
-DHCP=yes
-EOF
-	local pxe_subnet_bitmask
-	convert_ip_address_to_bitmask $pxe_subnet_mask_ip pxe_subnet_bitmask
-	cat > /etc/systemd/network/80-internal-static.network << EOF
-[Match]
-Name=$internal_iface
-[Network]
-DHCP=no
-Address=$pxe_internal_ip/$pxe_subnet_bitmask
-EOF
-	
-	systemctl restart systemd-networkd
-}
-
-convert_ip_address_to_bitmask() {
-	local binary=''
-	local D2B=({0..1}{0..1}{0..1}{0..1}{0..1}{0..1}{0..1}{0..1})
-	local decimals=($(tr '.' ' ' <<< $1))
-	local decimal
-	for decimal in "${decimals[@]}"; do
-		binary=$binary${D2B[$decimal]}
-	done
-	eval "$2=$(grep -o 1 <<< $binary | wc -l)"
-}
-
-configure_dns_tftp_server() {
-	mv -f /etc/resolv.conf.bak /etc/resolv.conf
-	grep '^nameserver' /etc/resolv.conf | cat > /etc/dnsmasq-resolv.conf
-	mv -f /etc/resolv.conf /etc/resolv.conf.bak
-	echo 'nameserver 127.0.0.1' > /etc/resolv.conf
-	
+configure_tftp_server() {
 	rm -rf $tftp_root
 	mkdir -p $tftp_root
 	ln -sf /usr/share/ipxe/ipxe-x86_64.efi $tftp_root/ipxe-x86_64.efi
 	ln -sf /usr/share/ipxe/undionly.kpxe $tftp_root/undionly.kpxe
 	
 	cat > /etc/dnsmasq.conf << EOF
-interface=$internal_iface
-resolv-file=/etc/dnsmasq-resolv.conf
 enable-tftp
 tftp-root=$tftp_root
 EOF
-	systemctl stop systemd-resolved
 	systemctl enable dnsmasq
+}
+
+configure_dns_server() {
+	cat > /etc/systemd/resolved.conf << EOF
+[Resolve]
+DNS=127.0.0.1
+EOF
+	cat >> /etc/dnsmasq.conf << EOF
+interface=$internal_iface
+resolv-file=/etc/resolv.conf
+EOF
+	
+	systemctl stop systemd-resolved
 	systemctl restart dnsmasq
 	systemctl start systemd-resolved
 }
@@ -171,6 +142,40 @@ EOF
 	
 	systemctl enable dhcp4
 	systemctl restart dhcp4
+}
+
+configure_network() {
+	rm -rf /etc/systemd/network
+	mkdir -p /etc/systemd/network
+	ln -sf /dev/null /etc/systemd/network/80-dhcp.network
+	cat > /etc/systemd/network/80-external-dynamic.network << EOF
+[Match]
+Name=$external_iface
+[Network]
+DHCP=yes
+EOF
+	local pxe_subnet_bitmask
+	convert_ip_address_to_bitmask $pxe_subnet_mask_ip pxe_subnet_bitmask
+	cat > /etc/systemd/network/80-internal-static.network << EOF
+[Match]
+Name=$internal_iface
+[Network]
+DHCP=no
+Address=$pxe_internal_ip/$pxe_subnet_bitmask
+EOF
+	
+	systemctl restart systemd-networkd
+}
+
+convert_ip_address_to_bitmask() {
+	local binary=''
+	local D2B=({0..1}{0..1}{0..1}{0..1}{0..1}{0..1}{0..1}{0..1})
+	local decimals=($(tr '.' ' ' <<< $1))
+	local decimal
+	for decimal in "${decimals[@]}"; do
+		binary=$binary${D2B[$decimal]}
+	done
+	eval "$2=$(grep -o 1 <<< $binary | wc -l)"
 }
 
 configure_nat() {
