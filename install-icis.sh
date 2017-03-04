@@ -1,4 +1,7 @@
 #!/bin/bash
+server_hostname=$(hostname)
+server_domain=$(hostname -f | sed -e "s/$server_hostname\.//")
+
 web_root=/var/www
 pxe_root=$web_root/pxe-images
 icis_root=$web_root/ister-cloud-init-svc
@@ -43,7 +46,7 @@ populate_pxe_content() {
 	ln -sf $(ls $pxe_root | grep 'org.clearlinux.*') $pxe_root/linux
 	cat > $pxe_root/ipxe_boot_script.txt << EOF
 #!ipxe
-kernel linux quiet init=/usr/lib/systemd/systemd-bootchart initcall_debug tsc=reliable no_timer_check noreplace-smp rw initrd=initrd isterconf=http://192.168.1.1/icis/static/ister/ister.conf
+kernel linux quiet init=/usr/lib/systemd/systemd-bootchart initcall_debug tsc=reliable no_timer_check noreplace-smp rw initrd=initrd isterconf=http://$server_hostname.$server_domain/icis/static/ister/ister.conf
 initrd initrd
 boot
 EOF
@@ -84,7 +87,7 @@ generate_web_configuration() {
 	cat > /etc/nginx/nginx.conf << EOF
 server {
 	listen 80;
-	server_name localhost;
+	server_name $server_hostname.$server_domain;
 	location / {
 		root $pxe_root;
 		autoindex on;

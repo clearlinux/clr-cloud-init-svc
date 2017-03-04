@@ -9,9 +9,9 @@ tftp_root=/srv/tftp
 main() {
 	install_dependencies
 	configure_network
-	configure_nat
-	configure_tftp_server
+	configure_dns_tftp_server
 	configure_dhcp_server
+	configure_nat
 }
 
 install_dependencies() {
@@ -23,21 +23,20 @@ configure_network() {
 	mkdir -p /etc/systemd/network
 	
 	ln -sf /dev/null /etc/systemd/network/80-dhcp.network
-	
 	cat > /etc/systemd/network/80-external-dynamic.network << EOF
 [Match]
 Name=$external_iface
 [Network]
 DHCP=yes
 EOF
-	
-	local bitmask
-	convert_ip_address_to_bitmask $pxe_subnet_mask_ip bitmask
+	local pxe_subnet_bitmask
+	convert_ip_address_to_bitmask $pxe_subnet_mask_ip pxe_subnet_bitmask
 	cat > /etc/systemd/network/80-internal-static.network << EOF
 [Match]
 Name=$internal_iface
 [Network]
-Address=$pxe_internal_ip/$bitmask
+DHCP=no
+Address=$pxe_internal_ip/$pxe_subnet_bitmask
 EOF
 	
 	systemctl restart systemd-networkd
@@ -54,39 +53,21 @@ convert_ip_address_to_bitmask() {
 	eval "$2=$(grep -o 1 <<< $binary | wc -l)"
 }
 
-configure_nat() {
-	iptables -t nat -F POSTROUTING
-	iptables -t nat -A POSTROUTING -o $external_iface -j MASQUERADE
-	iptables -t filter -F FORWARD
-	iptables -t filter -A FORWARD -i $external_iface -o $internal_iface -m state --state RELATED,ESTABLISHED -j ACCEPT
-	iptables -t filter -A FORWARD -i $internal_iface -o $external_iface -j ACCEPT
-	iptables_save_units=($(ls /usr/lib/systemd/system | egrep 'ip6?tables-save'))
-	systemctl enable ${iptables_save_units[@]}
-	systemctl restart ${iptables_save_units[@]}
-	iptables_restore_units=($(ls /usr/lib/systemd/system | egrep 'ip6?tables-restore'))
-	systemctl enable ${iptables_restore_units[@]}
-	systemctl restart ${iptables_restore_units[@]}
+configure_dns_tftp_server() {
+	mv -f /etc/resolv.conf.bak /etc/resolv.conf
+	grep '^nameserver' /etc/resolv.conf | cat > /etc/dnsmasq-resolv.conf
+	mv -f /etc/resolv.conf /etc/resolv.conf.bak
+	echo 'nameserver 127.0.0.1' > /etc/resolv.conf
+	systemctl restart systemd-resolved
 	
-	rm -rf /etc/sysctl.d
-	mkdir -p /etc/sysctl.d
-	echo net.ipv4.ip_forward=1 > /etc/sysctl.d/80-nat-forwarding.conf
-	echo 1 > /proc/sys/net/ipv4/ip_forward
-}
-
-configure_tftp_server() {
 	rm -rf $tftp_root
 	mkdir -p $tftp_root
 	ln -sf /usr/share/ipxe/ipxe-x86_64.efi $tftp_root/ipxe-x86_64.efi
 	ln -sf /usr/share/ipxe/undionly.kpxe $tftp_root/undionly.kpxe
 	
-	cat > /etc/systemd/resolved.conf << EOF
-[Resolve]
-DNSStubListener=no
-EOF
-	systemctl restart systemd-resolved
-	
 	cat > /etc/dnsmasq.conf << EOF
 interface=$internal_iface
+resolv-file=/etc/dnsmasq-resolv.conf
 enable-tftp
 tftp-root=$tftp_root
 EOF
@@ -95,11 +76,7 @@ EOF
 }
 
 configure_dhcp_server() {
-	local host_dns_servers=($(grep -Po '(?<=nameserver )(\d+\.?){4}' /etc/resolv.conf))
-	local dns_server_list=$(echo ${host_dns_servers[@]} | sed 's/ /, /g')
-	
 	cat > /etc/dhcpd.conf << EOF
-DHCPDARGS="$internal_iface";
 # iPXE-specific options
 # Source: http://www.ipxe.org/howto/dhcpd
 option space ipxe;
@@ -144,9 +121,10 @@ option ipxe.sdi code 40 = unsigned integer 8;
 option ipxe.nfs code 41 = unsigned integer 8;
 
 subnet $pxe_subnet.0 netmask $pxe_subnet_mask_ip {
+	authoritative;
 	option broadcast-address $pxe_subnet.255;
 	option routers $pxe_internal_ip;
-	option domain-name-servers $dns_server_list, $pxe_internal_ip;
+	option domain-name-servers $pxe_internal_ip;
 	
 	class "PXE-Chainload" {
 		match if substring(option vendor-class-identifier, 0, 9) = "PXEClient";
@@ -185,6 +163,30 @@ EOF
 	
 	systemctl enable dhcp4
 	systemctl restart dhcp4
+}
+
+configure_nat() {
+	iptables -t nat -F POSTROUTING
+	ip6tables -t nat -F POSTROUTING
+	iptables -t nat -A POSTROUTING -o $external_iface -j MASQUERADE
+	ip6tables -t nat -A POSTROUTING -o $external_iface -j MASQUERADE
+	iptables -t filter -F FORWARD
+	ip6tables -t filter -F FORWARD
+	iptables -t filter -A FORWARD -i $external_iface -o $internal_iface -m state --state RELATED,ESTABLISHED -j ACCEPT
+	ip6tables -t filter -A FORWARD -i $external_iface -o $internal_iface -m state --state RELATED,ESTABLISHED -j ACCEPT
+	iptables -t filter -A FORWARD -i $internal_iface -o $external_iface -j ACCEPT
+	ip6tables -t filter -A FORWARD -i $internal_iface -o $external_iface -j ACCEPT
+	systemctl enable iptables-save.service ip6tables-save.service
+	systemctl restart iptables-save.service ip6tables-save.service
+	systemctl enable iptables-restore.service ip6tables-restore.service
+	systemctl restart iptables-restore.service ip6tables-restore.service
+	
+	rm -rf /etc/sysctl.d
+	mkdir -p /etc/sysctl.d
+	echo net.ipv4.ip_forward=1 > /etc/sysctl.d/80-nat-forwarding.conf
+	echo net.ipv6.conf.all.forwarding=1 >> /etc/sysctl.d/80-nat-forwarding.conf
+	echo 1 > /proc/sys/net/ipv4/ip_forward
+	echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 }
 
 main
