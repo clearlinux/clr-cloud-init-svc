@@ -9,10 +9,9 @@ tftp_root=/srv/tftp
 main() {
 	if [ -d /sys/class/net/$external_iface ] && [ -d /sys/class/net/$internal_iface ] && [[ $(grep '^up$' /sys/class/net/$external_iface/operstate) ]] && [[ $(grep '^up$' /sys/class/net/$internal_iface/operstate) ]]; then
 		install_dependencies
-		configure_tftp_server
-		configure_dns_server
-		configure_dhcp_server
+		configure_tftp_dns_server
 		configure_network
+		configure_dhcp_server
 		configure_nat
 		return 0
 	else
@@ -26,36 +25,57 @@ install_dependencies() {
 	swupd bundle-add pxe-server
 }
 
-configure_tftp_server() {
+configure_tftp_dns_server() {
 	rm -rf $tftp_root
 	mkdir -p $tftp_root
 	ln -sf /usr/share/ipxe/ipxe-x86_64.efi $tftp_root/ipxe-x86_64.efi
 	ln -sf /usr/share/ipxe/undionly.kpxe $tftp_root/undionly.kpxe
-	
 	cat > /etc/dnsmasq.conf << EOF
 enable-tftp
 tftp-root=$tftp_root
-EOF
-	systemctl enable dnsmasq
-}
-
-configure_dns_server() {
-	cat > /etc/systemd/resolved.conf << EOF
-[Resolve]
-DNS=127.0.0.1
-EOF
-	cat >> /etc/dnsmasq.conf << EOF
-resolv-file=/etc/resolv.conf
+port=0
 EOF
 	
-	systemctl stop systemd-resolved
+	systemctl enable dnsmasq
 	systemctl restart dnsmasq
-	systemctl start systemd-resolved
+}
+
+configure_network() {
+	rm -rf /etc/systemd/network
+	mkdir -p /etc/systemd/network
+	ln -sf /dev/null /etc/systemd/network/80-dhcp.network
+	cat > /etc/systemd/network/80-external-dynamic.network << EOF
+[Match]
+Name=$external_iface
+[Network]
+DHCP=yes
+EOF
+	local pxe_subnet_bitmask
+	convert_ip_address_to_bitmask $pxe_subnet_mask_ip pxe_subnet_bitmask
+	cat > /etc/systemd/network/80-internal-static.network << EOF
+[Match]
+Name=$internal_iface
+[Network]
+DHCP=no
+Address=$pxe_internal_ip/$pxe_subnet_bitmask
+EOF
+	
+	systemctl restart systemd-networkd
+}
+
+convert_ip_address_to_bitmask() {
+	local binary=''
+	local D2B=({0..1}{0..1}{0..1}{0..1}{0..1}{0..1}{0..1}{0..1})
+	local decimals=($(tr '.' ' ' <<< $1))
+	local decimal
+	for decimal in "${decimals[@]}"; do
+		binary=$binary${D2B[$decimal]}
+	done
+	eval "$2=$(grep -o 1 <<< $binary | wc -l)"
 }
 
 configure_dhcp_server() {
 	cat > /etc/dhcpd.conf << EOF
-DHCPDARGS="$internal_iface"
 # iPXE-specific options
 # Source: http://www.ipxe.org/howto/dhcpd
 option space ipxe;
@@ -99,26 +119,26 @@ option ipxe.menu code 39 = unsigned integer 8;
 option ipxe.sdi code 40 = unsigned integer 8;
 option ipxe.nfs code 41 = unsigned integer 8;
 
+class "PXE-Chainload" {
+	match if substring(option vendor-class-identifier, 0, 9) = "PXEClient";
+	
+	next-server $pxe_internal_ip;
+	if exists user-class and option user-class = "iPXE" {
+		filename "http://$pxe_internal_ip/ipxe_boot_script.txt";
+	}
+	elsif substring(option vendor-class-identifier, 0, 20) = "PXEClient:Arch:00007" or substring(option vendor-class-identifier, 0, 20) = "PXEClient:Arch:00008" or substring(option vendor-class-identifier, 0, 20) = "PXEClient:Arch:00009" {
+		filename "ipxe-x86_64.efi";
+	}
+	elsif substring(option vendor-class-identifier, 0, 20) = "PXEClient:Arch:00000" {
+		filename "undionly.kpxe";
+	}
+}
+
 subnet $pxe_subnet.0 netmask $pxe_subnet_mask_ip {
 	authoritative;
 	option broadcast-address $pxe_subnet.255;
 	option routers $pxe_internal_ip;
 	option domain-name-servers $pxe_internal_ip;
-	
-	class "PXE-Chainload" {
-		match if substring(option vendor-class-identifier, 0, 9) = "PXEClient";
-		
-		next-server $pxe_internal_ip;
-		if exists user-class and option user-class = "iPXE" {
-			filename "http://$pxe_internal_ip/ipxe_boot_script.txt";
-		}
-		elsif substring(option vendor-class-identifier, 0, 20) = "PXEClient:Arch:00007" or substring(option vendor-class-identifier, 0, 20) = "PXEClient:Arch:00008" or substring(option vendor-class-identifier, 0, 20) = "PXEClient:Arch:00009" {
-			filename "ipxe-x86_64.efi";
-		}
-		elsif substring(option vendor-class-identifier, 0, 20) = "PXEClient:Arch:00000" {
-			filename "undionly.kpxe";
-		}
-	}
 	
 	pool {
 		allow members of "PXE-Chainload";
@@ -142,40 +162,6 @@ EOF
 	
 	systemctl enable dhcp4
 	systemctl restart dhcp4
-}
-
-configure_network() {
-	rm -rf /etc/systemd/network
-	mkdir -p /etc/systemd/network
-	ln -sf /dev/null /etc/systemd/network/80-dhcp.network
-	cat > /etc/systemd/network/80-external-dynamic.network << EOF
-[Match]
-Name=$external_iface
-[Network]
-DHCP=yes
-EOF
-	local pxe_subnet_bitmask
-	convert_ip_address_to_bitmask $pxe_subnet_mask_ip pxe_subnet_bitmask
-	cat > /etc/systemd/network/80-internal-static.network << EOF
-[Match]
-Name=$internal_iface
-[Network]
-DHCP=no
-Address=$pxe_internal_ip/$pxe_subnet_bitmask
-EOF
-	
-	systemctl restart systemd-networkd
-}
-
-convert_ip_address_to_bitmask() {
-	local binary=''
-	local D2B=({0..1}{0..1}{0..1}{0..1}{0..1}{0..1}{0..1}{0..1})
-	local decimals=($(tr '.' ' ' <<< $1))
-	local decimal
-	for decimal in "${decimals[@]}"; do
-		binary=$binary${D2B[$decimal]}
-	done
-	eval "$2=$(grep -o 1 <<< $binary | wc -l)"
 }
 
 configure_nat() {
