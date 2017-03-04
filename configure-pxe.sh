@@ -15,7 +15,8 @@ main() {
 		configure_nat
 		return 0
 	else
-		echo "ERROR: External interface or internal interface does not exist!!  Alternatively, external interface is not up or internal interface is not up!!"
+		echo 'ERROR: External interface or internal interface does not exist!!  Alternatively, external interface is not up or internal interface is not up!!'
+		echo 'ERROR: PXE not configured!!'
 		return 1
 	fi
 }

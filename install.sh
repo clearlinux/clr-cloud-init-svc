@@ -14,9 +14,11 @@ main() {
 	if [ ! -z "$server_hostname" ] && [ ! -z "$server_domain" ]; then
 		install_dependencies
 		configure_web_server
-		return 0
+		$(dirname $0)/configure-pxe.sh
+		return $?
 	else
-		echo "ERROR: Server hostname or server domain is not defined!!"
+		echo 'ERROR: Server hostname or server domain is not defined!!'
+		echo 'ICIS not installed!!'
 		return 1
 	fi
 }
