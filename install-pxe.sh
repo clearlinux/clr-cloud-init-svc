@@ -7,7 +7,7 @@ pxe_subnet_mask_ip=255.255.255.0
 tftp_root=/srv/tftp
 
 main() {
-	if [[ -d /sys/class/net/$external_iface && -d /sys/class/net/$internal_iface && grep '^up$' /sys/class/net/$external_iface/operstate && grep '^up$' /sys/class/net/$internal_iface/operstate ]]; then
+	if [ -d /sys/class/net/$external_iface ] && [ -d /sys/class/net/$internal_iface ] && [[ $(grep '^up$' /sys/class/net/$external_iface/operstate) ]] && [[ $(grep '^up$' /sys/class/net/$internal_iface/operstate) ]]; then
 		install_dependencies
 		configure_network
 		configure_dns_tftp_server

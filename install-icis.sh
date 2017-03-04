@@ -11,7 +11,7 @@ uwsgi_socket_dir=/run/uwsgi
 icis_app_name=icis
 
 main() {
-	if [[ ! -z "$server_hostname" && ! -z "$server_domain" ]]; then
+	if [ ! -z "$server_hostname" ] && [ ! -z "$server_domain" ]; then
 		install_dependencies
 		configure_web_server
 		return 0
