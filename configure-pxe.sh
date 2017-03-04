@@ -158,7 +158,7 @@ subnet $pxe_subnet.0 netmask $pxe_subnet_mask_ip {
 	option broadcast-address $pxe_subnet.255;
 	option routers $pxe_internal_ip;
 	option domain-name-servers $pxe_internal_ip;
-	option domain-name $server_domain;
+	option domain-name "$server_domain";
 	
 	pool {
 		allow members of "PXE-Chainload";

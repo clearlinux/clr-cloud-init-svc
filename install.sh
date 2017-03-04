@@ -38,7 +38,7 @@ configure_web_server() {
 stop_web_services() {
 	systemctl stop nginx
 	systemctl stop uwsgi@$icis_app_name.socket
-	systemctl stop uwsgi@$icis_app_name.service
+	systemctl disable uwsgi@$icis_app_name.service
 }
 
 populate_web_content() {
@@ -114,10 +114,8 @@ EOF
 
 start_web_services() {
 	systemctl enable uwsgi@$icis_app_name.service
-	systemctl restart uwsgi@$icis_app_name.service
 	systemctl enable uwsgi@$icis_app_name.socket
 	systemctl restart uwsgi@$icis_app_name.socket
-	
 	systemctl enable nginx
 	systemctl restart nginx
 }
