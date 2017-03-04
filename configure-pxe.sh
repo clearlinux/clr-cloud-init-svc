@@ -45,7 +45,6 @@ configure_dns_server() {
 DNS=127.0.0.1
 EOF
 	cat >> /etc/dnsmasq.conf << EOF
-interface=$internal_iface
 resolv-file=/etc/resolv.conf
 EOF
 	
@@ -56,6 +55,7 @@ EOF
 
 configure_dhcp_server() {
 	cat > /etc/dhcpd.conf << EOF
+DHCPDARGS="$internal_iface"
 # iPXE-specific options
 # Source: http://www.ipxe.org/howto/dhcpd
 option space ipxe;

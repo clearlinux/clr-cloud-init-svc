@@ -113,7 +113,8 @@ EOF
 }
 
 start_web_services() {
-	systemctl enable uwsgi@$icis_app_name.service	
+	systemctl enable uwsgi@$icis_app_name.service
+	systemctl restart uwsgi@$icis_app_name.service
 	systemctl enable uwsgi@$icis_app_name.socket
 	systemctl restart uwsgi@$icis_app_name.socket
 	
