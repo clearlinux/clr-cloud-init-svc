@@ -7,11 +7,17 @@ pxe_subnet_mask_ip=255.255.255.0
 tftp_root=/srv/tftp
 
 main() {
-	install_dependencies
-	configure_network
-	configure_dns_tftp_server
-	configure_dhcp_server
-	configure_nat
+	if [[ -d /sys/class/net/$external_iface && -d /sys/class/net/$internal_iface && grep '^up$' /sys/class/net/$external_iface/operstate && grep '^up$' /sys/class/net/$internal_iface/operstate ]]; then
+		install_dependencies
+		configure_network
+		configure_dns_tftp_server
+		configure_dhcp_server
+		configure_nat
+		return 0
+	else
+		echo "ERROR: External interface or internal interface does not exist!!  Alternatively, external interface is not up or internal interface is not up!!"
+		return 1
+	fi
 }
 
 install_dependencies() {
@@ -58,7 +64,6 @@ configure_dns_tftp_server() {
 	grep '^nameserver' /etc/resolv.conf | cat > /etc/dnsmasq-resolv.conf
 	mv -f /etc/resolv.conf /etc/resolv.conf.bak
 	echo 'nameserver 127.0.0.1' > /etc/resolv.conf
-	systemctl restart systemd-resolved
 	
 	rm -rf $tftp_root
 	mkdir -p $tftp_root
@@ -71,8 +76,10 @@ resolv-file=/etc/dnsmasq-resolv.conf
 enable-tftp
 tftp-root=$tftp_root
 EOF
+	systemctl stop systemd-resolved
 	systemctl enable dnsmasq
 	systemctl restart dnsmasq
+	systemctl start systemd-resolved
 }
 
 configure_dhcp_server() {
