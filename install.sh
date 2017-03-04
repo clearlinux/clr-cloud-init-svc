@@ -64,7 +64,7 @@ populate_icis_content() {
 	# Reference: http://uwsgi-docs.readthedocs.io/en/latest/Systemd.html#one-service-per-app-in-systemd
 	# Reference: https://www.dabapps.com/blog/introduction-to-pip-and-virtualenv-python/
 	mkdir -p $icis_root
-	cp -rf $(dirname ${0})/bin/* $icis_root
+	cp -rf $(dirname ${0})/app/* $icis_root
 	
 	local icis_venv_dir=$icis_root/env
 	virtualenv $icis_venv_dir
