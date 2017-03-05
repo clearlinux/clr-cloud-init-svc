@@ -48,10 +48,8 @@ configure_dns_server() {
 [Resolve]
 DNSStubListener=no
 EOF
-	grep '^nameserver' /etc/resolv.conf | cat > /etc/resolv-dnsmasq.conf
 	cat >> /etc/dnsmasq.conf << EOF
-resolv-file=/etc/resolv-dnsmasq.conf
-listen-address=127.0.0.1,$pxe_internal_ip
+listen-address=$pxe_internal_ip
 EOF
 	
 	systemctl stop systemd-resolved
@@ -67,7 +65,6 @@ configure_network() {
 Name=$external_iface
 [Network]
 DHCP=yes
-DNS=127.0.0.1
 EOF
 	local pxe_subnet_bitmask
 	convert_ip_address_to_bitmask $pxe_subnet_mask_ip pxe_subnet_bitmask
