@@ -3,8 +3,11 @@ source $(dirname $0)/install.conf
 
 main() {
 	install_dependencies
+	stop_web_services
 	$(dirname $0)/configure-ipxe.sh
-	configure_web_server
+	populate_icis_content
+	generate_web_configuration
+	start_web_services
 	return $?
 }
 
@@ -13,20 +16,13 @@ install_dependencies() {
 	pip install uwsgi
 }
 
-configure_web_server() {
-	stop_web_services
-	populate_web_content
-	generate_web_configuration
-	start_web_services
-}
-
 stop_web_services() {
 	systemctl stop nginx
 	systemctl stop uwsgi@$icis_app_name.socket
 	systemctl disable uwsgi@$icis_app_name.service
 }
 
-populate_web_content() {
+populate_icis_content() {
 	# Reference: http://uwsgi-docs.readthedocs.io/en/latest/Systemd.html#one-service-per-app-in-systemd
 	# Reference: https://www.dabapps.com/blog/introduction-to-pip-and-virtualenv-python/
 	rm -rf $icis_root
