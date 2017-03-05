@@ -10,7 +10,7 @@ main() {
 		return 0
 	else
 		echo 'ERROR: External interface or internal interface does not exist!!  Alternatively, external interface or internal interface is not up!!'
-		echo 'ERROR: PXE not configured!!'
+		echo 'PXE not configured!!'
 		return 1
 	fi
 }
@@ -43,6 +43,7 @@ EOF
 }
 
 configure_dns_server() {
+	mkdir -p /etc/systemd
 	cat > /etc/systemd/resolved.conf << EOF
 [Resolve]
 DNSStubListener=no

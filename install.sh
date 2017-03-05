@@ -5,10 +5,15 @@ main() {
 	install_dependencies
 	stop_web_services
 	$(dirname $0)/configure-ipxe.sh
-	populate_icis_content
-	generate_web_configuration
-	start_web_services
-	return $?
+	if [ $? -eq 0 ]; then
+		populate_icis_content
+		generate_web_configuration
+		start_web_services
+		return 0
+	else
+		echo 'ICIS not installed!!'
+		return 1
+	fi
 }
 
 install_dependencies() {
