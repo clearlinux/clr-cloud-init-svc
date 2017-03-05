@@ -1,26 +1,11 @@
 #!/bin/bash
-server_hostname=$(hostname)
-server_domain=$(dnsdomainname)
-
-web_root=/var/www
-pxe_root=$web_root/pxe-images
-icis_root=$web_root/ister-cloud-init-svc
-
-uwsgi_app_dir=/usr/share/uwsgi
-uwsgi_socket_dir=/run/uwsgi
-icis_app_name=icis
+source $(dirname $0)/install.conf
 
 main() {
-	if [ ! -z $server_hostname ] && [ ! -z $server_domain ]; then
-		install_dependencies
-		configure_web_server
-		$(dirname $0)/configure-pxe.sh $server_domain
-		return $?
-	else
-		echo 'ERROR: Server hostname or server domain is not defined!!'
-		echo 'ICIS not installed!!'
-		return 1
-	fi
+	install_dependencies
+	configure_web_server
+	$(dirname $0)/configure-pxe.sh
+	return $?
 }
 
 install_dependencies() {
@@ -42,35 +27,15 @@ stop_web_services() {
 }
 
 populate_web_content() {
-	rm -rf $web_root
-	populate_pxe_content
-	populate_icis_content
-}
-
-populate_pxe_content() {
-	mkdir -p $pxe_root
-	curl -o /tmp/clear-pxe.tar.xz https://download.clearlinux.org/current/clear-$(curl https://download.clearlinux.org/latest)-pxe.tar.xz
-	tar -xJf /tmp/clear-pxe.tar.xz -C $pxe_root
-	ln -sf $(ls $pxe_root | grep 'org.clearlinux.*') $pxe_root/linux
-	cat > $pxe_root/ipxe_boot_script.txt << EOF
-#!ipxe
-kernel linux quiet init=/usr/lib/systemd/systemd-bootchart initcall_debug tsc=reliable no_timer_check noreplace-smp rw initrd=initrd isterconf=http://$server_hostname.$server_domain/icis/static/ister/ister.conf
-initrd initrd
-boot
-EOF
-}
-
-populate_icis_content() {
 	# Reference: http://uwsgi-docs.readthedocs.io/en/latest/Systemd.html#one-service-per-app-in-systemd
 	# Reference: https://www.dabapps.com/blog/introduction-to-pip-and-virtualenv-python/
+	rm -rf $icis_root
 	mkdir -p $icis_root
 	cp -rf $(dirname ${0})/app/* $icis_root
-	
 	local icis_venv_dir=$icis_root/env
 	virtualenv $icis_venv_dir
 	$icis_venv_dir/bin/pip install -r $(dirname ${0})/requirements.txt
 	
-	rm -rf $uwsgi_app_dir
 	mkdir -p $uwsgi_app_dir
 	cat > $uwsgi_app_dir/$icis_app_name.ini << EOF
 [uwsgi]
@@ -90,21 +55,20 @@ EOF
 }
 
 generate_web_configuration() {
-	rm -rf /etc/nginx
 	mkdir -p /etc/nginx
 	cat > /etc/nginx/nginx.conf << EOF
 server {
 	listen 80;
-	server_name $server_hostname.$server_domain;
+	server_name localhost;
 	location / {
-		root $pxe_root;
+		root $ipxe_root;
 		autoindex on;
 	}
-	location /icis/static/ {
+	location /$icis_app_name/static/ {
 		root $icis_root/static;
-		rewrite ^/icis/static(/.*)$ $1 break;
+		rewrite ^/$icis_app_name/static(/.*)$ $1 break;
 	}
-	location /icis/ {
+	location /$icis_app_name/ {
 		uwsgi_pass unix://$uwsgi_socket_dir/$icis_app_name.sock;
 		include uwsgi_params;
 	}

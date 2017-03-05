@@ -1,16 +1,7 @@
 #!/bin/bash
-external_iface=eno1
-internal_iface=eno2
-pxe_subnet=192.168.1
-pxe_internal_ip=$pxe_subnet.1
-pxe_subnet_mask_ip=255.255.255.0
-tftp_root=/srv/tftp
-
-server_domain=$1
-
 main() {
 	if [ -d /sys/class/net/$external_iface ] && [ -d /sys/class/net/$internal_iface ] && [[ $(grep '^up$' /sys/class/net/$external_iface/operstate) ]] && [[ $(grep '^up$' /sys/class/net/$internal_iface/operstate) ]]; then
-		install_dependencies
+		populate_ipxe_content
 		configure_tftp_server
 		configure_dns_server
 		configure_network
@@ -18,14 +9,24 @@ main() {
 		configure_nat
 		return 0
 	else
-		echo 'ERROR: External interface or internal interface does not exist!!  Alternatively, external interface is not up or internal interface is not up!!'
+		echo 'ERROR: External interface or internal interface does not exist!!  Alternatively, external interface or internal interface is not up!!'
 		echo 'ERROR: PXE not configured!!'
 		return 1
 	fi
 }
 
-install_dependencies() {
-	swupd bundle-add pxe-server
+populate_ipxe_content() {
+	rm -rf $ipxe_root
+	mkdir -p $ipxe_root
+	curl -o /tmp/clear-pxe.tar.xz https://download.clearlinux.org/current/clear-$(curl https://download.clearlinux.org/latest)-pxe.tar.xz
+	tar -xJf /tmp/clear-pxe.tar.xz -C $ipxe_root
+	ln -sf $(ls $ipxe_root | grep 'org.clearlinux.*') $ipxe_root/linux
+	cat > $ipxe_root/ipxe_boot_script.txt << EOF
+#!ipxe
+kernel linux quiet init=/usr/lib/systemd/systemd-bootchart initcall_debug tsc=reliable no_timer_check noreplace-smp rw initrd=initrd isterconf=http://$pxe_internal_ip/icis/static/ister/default.conf
+initrd initrd
+boot
+EOF
 }
 
 configure_tftp_server() {
@@ -58,7 +59,6 @@ EOF
 }
 
 configure_network() {
-	rm -rf /etc/systemd/network
 	mkdir -p /etc/systemd/network
 	ln -sf /dev/null /etc/systemd/network/80-dhcp.network
 	cat > /etc/systemd/network/80-external-dynamic.network << EOF
@@ -158,7 +158,6 @@ subnet $pxe_subnet.0 netmask $pxe_subnet_mask_ip {
 	option broadcast-address $pxe_subnet.255;
 	option routers $pxe_internal_ip;
 	option domain-name-servers $pxe_internal_ip;
-	option domain-name "$server_domain";
 	
 	pool {
 		allow members of "PXE-Chainload";
@@ -176,7 +175,6 @@ subnet $pxe_subnet.0 netmask $pxe_subnet_mask_ip {
 }
 EOF
 	
-	rm -rf /var/db
 	mkdir -p /var/db
 	touch /var/db/dhcpd.leases
 	
@@ -200,7 +198,6 @@ configure_nat() {
 	systemctl enable iptables-restore.service ip6tables-restore.service
 	systemctl restart iptables-restore.service ip6tables-restore.service
 	
-	rm -rf /etc/sysctl.d
 	mkdir -p /etc/sysctl.d
 	echo net.ipv4.ip_forward=1 > /etc/sysctl.d/80-nat-forwarding.conf
 	echo net.ipv6.conf.all.forwarding=1 >> /etc/sysctl.d/80-nat-forwarding.conf
