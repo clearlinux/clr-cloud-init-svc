@@ -3,8 +3,8 @@ source $(dirname $0)/install.conf
 
 main() {
 	install_dependencies
-	configure_web_server
 	$(dirname $0)/configure-ipxe.sh
+	configure_web_server
 	return $?
 }
 
