@@ -10,7 +10,7 @@ main() {
 		return 0
 	else
 		echo 'ERROR: External interface or internal interface does not exist!!  Alternatively, external interface or internal interface is not up!!'
-		echo 'ERROR: PXE not configured!!'
+		echo 'PXE not configured!!'
 		return 1
 	fi
 }
@@ -23,7 +23,7 @@ populate_ipxe_content() {
 	ln -sf $(ls $ipxe_root | grep 'org.clearlinux.*') $ipxe_root/linux
 	cat > $ipxe_root/ipxe_boot_script.txt << EOF
 #!ipxe
-kernel linux quiet init=/usr/lib/systemd/systemd-bootchart initcall_debug tsc=reliable no_timer_check noreplace-smp rw initrd=initrd isterconf=http://$pxe_internal_ip/icis/static/ister/default.conf
+kernel linux quiet init=/usr/lib/systemd/systemd-bootchart initcall_debug tsc=reliable no_timer_check noreplace-smp rw initrd=initrd isterconf=http://$pxe_internal_ip/$icis_app_name/static/ister/ister.conf
 initrd initrd
 boot
 EOF
@@ -40,17 +40,19 @@ tftp-root=$tftp_root
 EOF
 	
 	systemctl enable dnsmasq
+	
 }
 
 configure_dns_server() {
+	mkdir -p /etc/systemd
 	cat > /etc/systemd/resolved.conf << EOF
 [Resolve]
 DNSStubListener=no
 EOF
-	grep '^nameserver' /etc/resolv.conf | cat > /etc/resolv-dnsmasq.conf
 	cat >> /etc/dnsmasq.conf << EOF
-resolv-file=/etc/resolv-dnsmasq.conf
-listen-address=127.0.0.1,$pxe_internal_ip
+interface=$internal_iface
+bind-interfaces
+listen-address=$pxe_internal_ip
 EOF
 	
 	systemctl stop systemd-resolved
@@ -66,7 +68,6 @@ configure_network() {
 Name=$external_iface
 [Network]
 DHCP=yes
-DNS=127.0.0.1
 EOF
 	local pxe_subnet_bitmask
 	convert_ip_address_to_bitmask $pxe_subnet_mask_ip pxe_subnet_bitmask
@@ -75,7 +76,6 @@ EOF
 Name=$internal_iface
 [Network]
 DHCP=no
-DNS=$pxe_internal_ip
 Address=$pxe_internal_ip/$pxe_subnet_bitmask
 EOF
 	
@@ -184,25 +184,18 @@ EOF
 
 configure_nat() {
 	iptables -t nat -F POSTROUTING
-	ip6tables -t nat -F POSTROUTING
 	iptables -t nat -A POSTROUTING -o $external_iface -j MASQUERADE
-	ip6tables -t nat -A POSTROUTING -o $external_iface -j MASQUERADE
 	iptables -t filter -F FORWARD
-	ip6tables -t filter -F FORWARD
 	iptables -t filter -A FORWARD -i $external_iface -o $internal_iface -m state --state RELATED,ESTABLISHED -j ACCEPT
-	ip6tables -t filter -A FORWARD -i $external_iface -o $internal_iface -m state --state RELATED,ESTABLISHED -j ACCEPT
 	iptables -t filter -A FORWARD -i $internal_iface -o $external_iface -j ACCEPT
-	ip6tables -t filter -A FORWARD -i $internal_iface -o $external_iface -j ACCEPT
-	systemctl enable iptables-save.service ip6tables-save.service
-	systemctl restart iptables-save.service ip6tables-save.service
-	systemctl enable iptables-restore.service ip6tables-restore.service
-	systemctl restart iptables-restore.service ip6tables-restore.service
+	systemctl enable iptables-save.service
+	systemctl restart iptables-save.service
+	systemctl enable iptables-restore.service
+	systemctl restart iptables-restore.service
 	
 	mkdir -p /etc/sysctl.d
 	echo net.ipv4.ip_forward=1 > /etc/sysctl.d/80-nat-forwarding.conf
-	echo net.ipv6.conf.all.forwarding=1 >> /etc/sysctl.d/80-nat-forwarding.conf
 	echo 1 > /proc/sys/net/ipv4/ip_forward
-	echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 }
 
 main
