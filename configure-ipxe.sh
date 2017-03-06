@@ -2,7 +2,8 @@
 main() {
 	if [ -d /sys/class/net/$external_iface ] && [ -d /sys/class/net/$internal_iface ] && [[ $(grep '^up$' /sys/class/net/$external_iface/operstate) ]] && [[ $(grep '^up$' /sys/class/net/$internal_iface/operstate) ]]; then
 		populate_ipxe_content
-		configure_tftp_dns_server
+		configure_tftp_server
+		configure_dns_server
 		configure_network
 		configure_dhcp_server
 		configure_nat
@@ -28,24 +29,45 @@ boot
 EOF
 }
 
-configure_tftp_dns_server() {
+configure_tftp_server() {
 	rm -rf $tftp_root
 	mkdir -p $tftp_root
 	ln -sf /usr/share/ipxe/ipxe-x86_64.efi $tftp_root/ipxe-x86_64.efi
 	ln -sf /usr/share/ipxe/undionly.kpxe $tftp_root/undionly.kpxe
 	cat > /etc/dnsmasq.conf << EOF
-interface=$internal_iface
-listen-address=$pxe_internal_ip
 enable-tftp
 tftp-root=$tftp_root
 EOF
 	
 	systemctl enable dnsmasq
+	
+}
+
+configure_dns_server() {
+	mkdir -p /etc/systemd
+	cat > /etc/systemd/resolved.conf << EOF
+[Resolve]
+DNSStubListener=no
+EOF
+	cat >> /etc/dnsmasq.conf << EOF
+interface=$internal_iface
+listen-address=$pxe_internal_ip
+EOF
+	
+	systemctl stop systemd-resolved
 	systemctl restart dnsmasq
+	systemctl start systemd-resolved
 }
 
 configure_network() {
 	mkdir -p /etc/systemd/network
+	ln -sf /dev/null /etc/systemd/network/80-dhcp.network
+	cat > /etc/systemd/network/80-external-dynamic.network << EOF
+[Match]
+Name=$external_iface
+[Network]
+DHCP=yes
+EOF
 	local pxe_subnet_bitmask
 	convert_ip_address_to_bitmask $pxe_subnet_mask_ip pxe_subnet_bitmask
 	cat > /etc/systemd/network/80-internal-static.network << EOF
@@ -53,6 +75,7 @@ configure_network() {
 Name=$internal_iface
 [Network]
 DHCP=no
+DNS=$pxe_internal_ip
 Address=$pxe_internal_ip/$pxe_subnet_bitmask
 EOF
 	
