@@ -47,13 +47,10 @@ configure_dns_server() {
 	mkdir -p /etc/systemd
 	cat > /etc/systemd/resolved.conf << EOF
 [Resolve]
-DNS=$pxe_internal_ip
 DNSStubListener=no
 EOF
-	grep '^nameserver' /etc/resolv.conf | cat > /etc/resolv-dnsmasq.conf
 	cat >> /etc/dnsmasq.conf << EOF
 listen-address=$pxe_internal_ip
-resolv-file=/etc/resolv-dnsmasq.conf
 EOF
 	
 	systemctl stop systemd-resolved
@@ -77,6 +74,7 @@ EOF
 Name=$internal_iface
 [Network]
 DHCP=no
+DNS=$pxe_internal_ip
 Address=$pxe_internal_ip/$pxe_subnet_bitmask
 EOF
 	
@@ -185,25 +183,18 @@ EOF
 
 configure_nat() {
 	iptables -t nat -F POSTROUTING
-	ip6tables -t nat -F POSTROUTING
 	iptables -t nat -A POSTROUTING -o $external_iface -j MASQUERADE
-	ip6tables -t nat -A POSTROUTING -o $external_iface -j MASQUERADE
 	iptables -t filter -F FORWARD
-	ip6tables -t filter -F FORWARD
 	iptables -t filter -A FORWARD -i $external_iface -o $internal_iface -m state --state RELATED,ESTABLISHED -j ACCEPT
-	ip6tables -t filter -A FORWARD -i $external_iface -o $internal_iface -m state --state RELATED,ESTABLISHED -j ACCEPT
 	iptables -t filter -A FORWARD -i $internal_iface -o $external_iface -j ACCEPT
-	ip6tables -t filter -A FORWARD -i $internal_iface -o $external_iface -j ACCEPT
-	systemctl enable iptables-save.service ip6tables-save.service
-	systemctl restart iptables-save.service ip6tables-save.service
-	systemctl enable iptables-restore.service ip6tables-restore.service
-	systemctl restart iptables-restore.service ip6tables-restore.service
+	systemctl enable iptables-save.service
+	systemctl restart iptables-save.service
+	systemctl enable iptables-restore.service
+	systemctl restart iptables-restore.service
 	
 	mkdir -p /etc/sysctl.d
 	echo net.ipv4.ip_forward=1 > /etc/sysctl.d/80-nat-forwarding.conf
-	echo net.ipv6.conf.all.forwarding=1 >> /etc/sysctl.d/80-nat-forwarding.conf
 	echo 1 > /proc/sys/net/ipv4/ip_forward
-	echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 }
 
 main
