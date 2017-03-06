@@ -47,11 +47,13 @@ configure_dns_server() {
 	mkdir -p /etc/systemd
 	cat > /etc/systemd/resolved.conf << EOF
 [Resolve]
+DNS=$pxe_internal_ip
 DNSStubListener=no
 EOF
+	grep '^nameserver' /etc/resolv.conf | cat > /etc/resolv-dnsmasq.conf
 	cat >> /etc/dnsmasq.conf << EOF
-interface=$internal_iface
 listen-address=$pxe_internal_ip
+resolv-file=/etc/resolv-dnsmasq.conf
 EOF
 	
 	systemctl stop systemd-resolved
@@ -75,7 +77,6 @@ EOF
 Name=$internal_iface
 [Network]
 DHCP=no
-DNS=$pxe_internal_ip
 Address=$pxe_internal_ip/$pxe_subnet_bitmask
 EOF
 	
