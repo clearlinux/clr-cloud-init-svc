@@ -50,6 +50,8 @@ configure_dns_server() {
 DNSStubListener=no
 EOF
 	cat >> /etc/dnsmasq.conf << EOF
+interface=$internal_iface
+bind-interfaces
 listen-address=$pxe_internal_ip
 EOF
 	
@@ -74,7 +76,6 @@ EOF
 Name=$internal_iface
 [Network]
 DHCP=no
-DNS=$pxe_internal_ip
 Address=$pxe_internal_ip/$pxe_subnet_bitmask
 EOF
 	
