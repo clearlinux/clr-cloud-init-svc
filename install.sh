@@ -1,5 +1,5 @@
 #!/bin/bash
-source $(dirname $0)/install.conf
+source $(dirname $0)/parameters.conf
 
 main() {
 	install_dependencies
