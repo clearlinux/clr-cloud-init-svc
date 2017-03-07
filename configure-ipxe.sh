@@ -1,4 +1,6 @@
 #!/bin/bash
+source $(dirname $0)/parameters.conf
+
 main() {
 	if [ -d /sys/class/net/$external_iface ] && [ -d /sys/class/net/$internal_iface ] && [[ $(grep '^up$' /sys/class/net/$external_iface/operstate) ]] && [[ $(grep '^up$' /sys/class/net/$internal_iface/operstate) ]]; then
 		populate_ipxe_content
@@ -50,8 +52,6 @@ configure_dns_server() {
 DNSStubListener=no
 EOF
 	cat >> /etc/dnsmasq.conf << EOF
-interface=$internal_iface
-bind-interfaces
 listen-address=$pxe_internal_ip
 EOF
 	
@@ -155,7 +155,6 @@ class "PXE-Chainload" {
 
 subnet $pxe_subnet.0 netmask $pxe_subnet_mask_ip {
 	authoritative;
-	option broadcast-address $pxe_subnet.255;
 	option routers $pxe_internal_ip;
 	option domain-name-servers $pxe_internal_ip;
 	
@@ -185,9 +184,6 @@ EOF
 configure_nat() {
 	iptables -t nat -F POSTROUTING
 	iptables -t nat -A POSTROUTING -o $external_iface -j MASQUERADE
-	iptables -t filter -F FORWARD
-	iptables -t filter -A FORWARD -i $external_iface -o $internal_iface -m state --state RELATED,ESTABLISHED -j ACCEPT
-	iptables -t filter -A FORWARD -i $internal_iface -o $external_iface -j ACCEPT
 	systemctl enable iptables-save.service
 	systemctl restart iptables-save.service
 	systemctl enable iptables-restore.service
