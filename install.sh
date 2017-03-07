@@ -17,7 +17,7 @@ main() {
 }
 
 install_dependencies() {
-	swupd bundle-add pxe-server python-basic
+	swupd bundle-add pxe-server python-basic-dev
 	pip install uwsgi
 }
 
