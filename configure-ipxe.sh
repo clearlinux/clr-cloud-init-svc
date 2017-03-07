@@ -1,4 +1,6 @@
 #!/bin/bash
+source $(dirname $0)/parameters.conf
+
 main() {
 	if [ -d /sys/class/net/$external_iface ] && [ -d /sys/class/net/$internal_iface ] && [[ $(grep '^up$' /sys/class/net/$external_iface/operstate) ]] && [[ $(grep '^up$' /sys/class/net/$internal_iface/operstate) ]]; then
 		populate_ipxe_content
