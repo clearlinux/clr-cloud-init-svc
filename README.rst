@@ -1,19 +1,29 @@
-Ister Cloud Initalization Service
-=================================
+ICIS: Ister Cloud Initalization Service
+#######################################
 
-This web application is a helper for standing up up n-node clusters of Clear
-Linux.  It works with Ister, the Clear Linux Installer, and enables landing
-role-based cloud-init userdata files.  Hosts can be stood up that are ready to
-be managed with Ansible.
+ICIS is a service that `Ister`_ uses to automatically install an instance of
+Clear Linux.  It applies role-based coud-init configurations during the
+installation.  It can be used to stand up a cluster of Clear Linux instances
+that are ready to be managed with Ansible.
 
-An install script is included which sets up an iPXE server and gets this web
-application running.  It assumes that the PXE setup is using NAT, since it is a
-common deployment scenario meant to isolate clients from an external network.
+Getting Started
+===============
 
-For additional details, please see the `bulk provisioning`_ and `network
-booting`_ documentation on `clearlinux.org`_.
+To get started, simply ``git clone`` the repository and run ``install.sh``.
+This will provision a PXE server and install ICIS with default configurations.
+
+The default configuration for provisioning a PXE server creates a router that
+performs network address translation for PXE clients.  Additional requirements
+that must be met to use the default configuration out of the box are outlined in
+the preparations section of the `network booting`_ documentation for Clear
+Linux.
+
+ICIS relies on cloud-init configurations to perform an automated installation of
+Clear Linux. These need to be changed to apply user-specific configurations.
+Instructions on how to change these are outlined in the `bulk provisioning`_
+documentation for Clear Linux.
 
 
-.. _bulk provisioning: https://clearlinux.org/documentation/bulk_provisioning.html
+.. _Ister: https://github.com/clearlinux/ister
 .. _network booting: https://clearlinux.org/documentation/network_boot.html
-.. _clearlinux.org: https://clearlinux.org
+.. _bulk provisioning: https://clearlinux.org/documentation/bulk_provisioning.html
