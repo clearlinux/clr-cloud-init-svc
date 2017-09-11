@@ -56,8 +56,10 @@ EOF
 }
 
 generate_web_configuration() {
-	mkdir -p /etc/nginx
-	cat > /etc/nginx/nginx.conf << EOF
+	local nginx_dir=/etc/nginx
+	mkdir -p $nginx_dir/conf.d
+	cp -f /usr/share/nginx/conf/nginx.conf.example $nginx_dir/nginx.conf
+	cat > /etc/nginx/conf.d/pxe.conf << EOF
 server {
 	listen 80;
 	server_name localhost;
@@ -86,4 +88,3 @@ start_web_services() {
 }
 
 main
-
