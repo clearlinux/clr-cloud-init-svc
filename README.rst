@@ -25,5 +25,5 @@ documentation for Clear Linux.
 
 
 .. _Ister: https://github.com/clearlinux/ister
-.. _network booting: https://clearlinux.org/documentation/network_boot.html
-.. _bulk provisioning: https://clearlinux.org/documentation/bulk_provisioning.html
+.. _network booting: https://clearlinux.org/documentation/clear-linux/guides/network/ipxe-install.html
+.. _bulk provisioning: https://clearlinux.org/documentation/clear-linux/guides/maintenance/bulk-provision.html
