@@ -24,6 +24,6 @@ Instructions on how to change these are outlined in the `bulk provisioning`_
 documentation for Clear Linux.
 
 
-.. _Ister: https://github.com/clearlinux/ister
+.. _Ister: https://github.com/bryteise/ister
 .. _network booting: https://clearlinux.org/documentation/clear-linux/guides/network/ipxe-install.html
 .. _bulk provisioning: https://clearlinux.org/documentation/clear-linux/guides/maintenance/bulk-provision.html
