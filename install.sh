@@ -36,7 +36,7 @@ populate_icis_content() {
 	local icis_venv_dir=$icis_root/env
 	virtualenv $icis_venv_dir
 	$icis_venv_dir/bin/pip install -r $(dirname ${0})/requirements.txt
-	
+
 	mkdir -p $uwsgi_app_dir
 	cat > $uwsgi_app_dir/$icis_app_name.ini << EOF
 [uwsgi]
@@ -69,7 +69,7 @@ server {
 	}
 	location /$icis_app_name/static/ {
 		root $icis_root/static;
-		rewrite ^/$icis_app_name/static(/.*)$ $1 break;
+		rewrite ^/$icis_app_name/static(/.*)$ \$1 break;
 	}
 	location /$icis_app_name/ {
 		uwsgi_pass unix://$uwsgi_socket_dir/$icis_app_name.sock;
