@@ -1,4 +1,4 @@
-ICIS: Ister Cloud Initalization Service
+ICIS: Ister Cloud Initialization Service
 #######################################
 
 ICIS is a service that `Ister`_ uses to automatically install an instance of
