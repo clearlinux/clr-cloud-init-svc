@@ -9,7 +9,8 @@ that are ready to be managed with Ansible.
 Getting Started
 ===============
 
-To get started, simply ``git clone`` the repository and run ``install.sh``.
+To get started, simply ``git clone https://github.com/clearlinux/ister-cloud-init-svc.git`` , 
+configure parameters.conf to suit your system, and run ``install.sh``. 
 This will provision a PXE server and install ICIS with default configurations.
 
 The default configuration for provisioning a PXE server creates a router that
