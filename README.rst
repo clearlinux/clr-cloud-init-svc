@@ -1,7 +1,7 @@
 ICIS: Ister Cloud Initialization Service
 #######################################
 
-ICIS is a service that `Ister`_ uses to automatically install an instance of
+ICIS is a service that `clr-installer`_ uses to automatically install an instance of
 Clear Linux.  It applies role-based coud-init configurations during the
 installation.  It can be used to stand up a cluster of Clear Linux instances
 that are ready to be managed with Ansible.
@@ -25,6 +25,6 @@ Instructions on how to change these are outlined in the `bulk provisioning`_
 documentation for Clear Linux.
 
 
-.. _Ister: https://github.com/bryteise/ister
+.. _clr-installer: https://github.com/clearlinux/clr-installer
 .. _network booting: https://clearlinux.org/documentation/clear-linux/guides/network/ipxe-install
 .. _bulk provisioning: https://clearlinux.org/documentation/clear-linux/guides/maintenance/bulk-provision
