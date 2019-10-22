@@ -25,7 +25,7 @@ populate_ipxe_content() {
 	ln -sf $(ls $ipxe_root | grep 'org.clearlinux.*') $ipxe_root/linux
 	cat > $ipxe_root/ipxe_boot_script.txt << EOF
 #!ipxe
-kernel linux quiet init=/usr/lib/systemd/systemd-bootchart initcall_debug tsc=reliable no_timer_check noreplace-smp rw initrd=initrd isterconf=http://$pxe_internal_ip/$icis_app_name/static/ister/ister.conf
+kernel linux quiet init=/usr/lib/systemd/systemd-bootchart initcall_debug tsc=reliable no_timer_check noreplace-smp rw initrd=initrd clri.descriptor=http://$pxe_internal_ip/$icis_app_name/static/clr-installer/cloud.yaml
 initrd initrd
 boot
 EOF
