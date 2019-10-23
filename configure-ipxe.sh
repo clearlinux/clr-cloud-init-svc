@@ -78,7 +78,12 @@ Name=$internal_iface
 DHCP=no
 Address=$pxe_internal_ip/$pxe_subnet_bitmask
 EOF
-	
+	if systemctl is-active --quiet NetworkManager; then
+		echo "Disabling NetworkManager for $external_iface and $internal_iface"
+		nmcli device set $external_iface managed false
+		nmcli device set $internal_iface managed false
+	fi
+
 	systemctl restart systemd-networkd
 }
 
