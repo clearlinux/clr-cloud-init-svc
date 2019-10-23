@@ -9,9 +9,11 @@ that are ready to be managed with Ansible.
 Getting Started
 ===============
 
-To get started, simply ``git clone https://github.com/clearlinux/ister-cloud-init-svc.git`` , 
+To get started, simply ``git clone https://github.com/clearlinux/ister-cloud-init-svc.git``, 
 configure parameters.conf to suit your system, and run ``install.sh``. 
-This will provision a PXE server and install ICIS with default configurations.
+This will provision a PXE server, install ICIS with default configurations,
+and disable NetworkManager for the internal/external interfaces set in
+parameters.conf which allows the systemd-networkd settings to take effect.
 
 The default configuration for provisioning a PXE server creates a router that
 performs network address translation for PXE clients.  Additional requirements
