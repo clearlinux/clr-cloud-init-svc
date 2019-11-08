@@ -6,12 +6,12 @@ main() {
 	stop_web_services
 	$(dirname $0)/configure-ipxe.sh
 	if [ $? -eq 0 ]; then
-		populate_icis_content
+		populate_ccis_content
 		generate_web_configuration
 		start_web_services
 		return 0
 	else
-		echo 'ICIS not installed!!'
+		echo 'CCIS not installed!!'
 		return 1
 	fi
 }
@@ -23,28 +23,28 @@ install_dependencies() {
 
 stop_web_services() {
 	systemctl stop nginx
-	systemctl stop uwsgi@$icis_app_name.socket
-	systemctl disable uwsgi@$icis_app_name.service
+	systemctl stop uwsgi@$ccis_app_name.socket
+	systemctl disable uwsgi@$ccis_app_name.service
 }
 
-populate_icis_content() {
+populate_ccis_content() {
 	# Reference: http://uwsgi-docs.readthedocs.io/en/latest/Systemd.html#one-service-per-app-in-systemd
 	# Reference: https://www.dabapps.com/blog/introduction-to-pip-and-virtualenv-python/
-	rm -rf $icis_root
-	mkdir -p $icis_root
-	cp -rf $(dirname ${0})/app/* $icis_root
-	local icis_venv_dir=$icis_root/env
-	virtualenv $icis_venv_dir
-	$icis_venv_dir/bin/pip install -r $(dirname ${0})/requirements.txt
+	rm -rf $ccis_root
+	mkdir -p $ccis_root
+	cp -rf $(dirname ${0})/app/* $ccis_root
+	local ccis_venv_dir=$ccis_root/env
+	virtualenv $ccis_venv_dir
+	$ccis_venv_dir/bin/pip install -r $(dirname ${0})/requirements.txt
 
 	mkdir -p $uwsgi_app_dir
-	cat > $uwsgi_app_dir/$icis_app_name.ini << EOF
+	cat > $uwsgi_app_dir/$ccis_app_name.ini << EOF
 [uwsgi]
 # App configurations
 module = app
 callable = app
-chdir = $icis_root
-home = $icis_venv_dir
+chdir = $ccis_root
+home = $ccis_venv_dir
 
 # Init system configurations
 master = true
@@ -67,12 +67,12 @@ server {
 		root $ipxe_root;
 		autoindex on;
 	}
-	location /$icis_app_name/static/ {
-		root $icis_root/static;
-		rewrite ^/$icis_app_name/static(/.*)$ \$1 break;
+	location /$ccis_app_name/static/ {
+		root $ccis_root/static;
+		rewrite ^/$ccis_app_name/static(/.*)$ \$1 break;
 	}
-	location /$icis_app_name/ {
-		uwsgi_pass unix://$uwsgi_socket_dir/$icis_app_name.sock;
+	location /$ccis_app_name/ {
+		uwsgi_pass unix://$uwsgi_socket_dir/$ccis_app_name.sock;
 		include uwsgi_params;
 	}
 }
@@ -80,9 +80,9 @@ EOF
 }
 
 start_web_services() {
-	systemctl enable uwsgi@$icis_app_name.service
-	systemctl enable uwsgi@$icis_app_name.socket
-	systemctl restart uwsgi@$icis_app_name.socket
+	systemctl enable uwsgi@$ccis_app_name.service
+	systemctl enable uwsgi@$ccis_app_name.socket
+	systemctl restart uwsgi@$ccis_app_name.socket
 	systemctl enable nginx
 	systemctl restart nginx
 }
